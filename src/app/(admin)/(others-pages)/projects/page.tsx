@@ -111,7 +111,7 @@ export default function BlankPage() {
   });
 
   return (
-    <main className="min-h-screen bg-gray-100 p-8">
+    <main className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Tabs Section */}
         <div className="flex flex-wrap gap-3 mb-8">

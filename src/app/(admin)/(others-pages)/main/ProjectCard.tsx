@@ -1,5 +1,6 @@
 "use client";
 import { CalendarDays, Eye, Edit3 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Project {
   id: number;
@@ -17,6 +18,8 @@ interface Project {
 }
 
 export default function ProjectCard({ project }: { project: Project }) {
+  const router = useRouter();
+
   const priorityColors: Record<string, string> = {
     HIGH: "bg-red-100 text-red-600",
     MEDIUM: "bg-yellow-100 text-yellow-600",
@@ -106,10 +109,17 @@ export default function ProjectCard({ project }: { project: Project }) {
 
       {/* Buttons */}
       <div className="flex gap-3">
-        <button className="flex items-center justify-center gap-2 w-1/2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+        <button
+          onClick={() => router.push(`/projects/${project.id}`)} // 👈 View Details
+          className="flex items-center justify-center gap-2 w-1/2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+        >
           <Eye size={16} /> View
         </button>
-        <button className="flex items-center justify-center gap-2 w-1/2 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-800">
+
+        <button
+          onClick={() => router.push(`/projects/${project.id}/edit`)} // 👈 Edit Project
+          className="flex items-center justify-center gap-2 w-1/2 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-800"
+        >
           <Edit3 size={16} /> Edit
         </button>
       </div>
