@@ -3,10 +3,9 @@ import { useState } from "react";
 import ProjectCard from "../main/ProjectCard";
 
 export default function BlankPage() {
-  // ✅ Hooks should be inside the component
   const [activeTab, setActiveTab] = useState("All Projects");
 
-  // ✅ Project data (can later come from API)
+  // ✅ Sample Project Data
   const projects = [
     {
       id: 1,
@@ -19,8 +18,10 @@ export default function BlankPage() {
       total: 45000,
       paid: 35000,
       balance: 10000,
-      nextPayment: "1/15/2024",
+      nextPayment: "2024-01-15",
       overdue: true,
+      deadline: "2024-02-01",
+      issues: 2,
     },
     {
       id: 2,
@@ -33,8 +34,10 @@ export default function BlankPage() {
       total: 32000,
       paid: 20000,
       balance: 12000,
-      nextPayment: "1/20/2024",
+      nextPayment: "2024-01-20",
       overdue: true,
+      deadline: "2024-02-10",
+      issues: 0,
     },
     {
       id: 3,
@@ -47,8 +50,10 @@ export default function BlankPage() {
       total: 28000,
       paid: 15000,
       balance: 13000,
-      nextPayment: "1/25/2024",
+      nextPayment: "2024-01-25",
       overdue: true,
+      deadline: "2024-03-05",
+      issues: 3,
     },
     {
       id: 4,
@@ -61,8 +66,10 @@ export default function BlankPage() {
       total: 55000,
       paid: 10000,
       balance: 45000,
-      nextPayment: "2/10/2024",
+      nextPayment: "2024-02-10",
       overdue: false,
+      deadline: "2024-03-15",
+      issues: 1,
     },
     {
       id: 5,
@@ -77,26 +84,34 @@ export default function BlankPage() {
       balance: 0,
       nextPayment: "—",
       overdue: false,
+      deadline: "2024-01-10",
+      issues: 0,
     },
   ];
 
-  // 🧮 Counts for each tab
+  // 🧮 Tab Counts
   const counts = {
     all: projects.length,
     active: projects.filter((p) => p.status === "ACTIVE").length,
     completed: projects.filter((p) => p.status === "COMPLETED").length,
     overdue: projects.filter((p) => p.overdue).length,
+    deadline: projects.filter(
+      (p) => new Date(p.deadline) < new Date("2024-03-01") // sample condition
+    ).length,
+    issues: projects.filter((p) => p.issues > 0).length,
   };
 
-  // 🧭 Tabs setup
+  // 🧭 Tabs Setup
   const tabs = [
     { name: "All Projects", count: counts.all, icon: "📁" },
     { name: "Active", count: counts.active, icon: "🟢" },
     { name: "Completed", count: counts.completed, icon: "✅" },
     { name: "Overdue Payments", count: counts.overdue, icon: "⚠️" },
+    { name: "Deadline", count: counts.deadline, icon: "⏰" },
+    { name: "Issues", count: counts.issues, icon: "🐞" },
   ];
 
-  // 🔍 Filtered projects by active tab
+  // 🔍 Filtered Projects
   const filteredProjects = projects.filter((project) => {
     switch (activeTab) {
       case "Active":
@@ -105,6 +120,10 @@ export default function BlankPage() {
         return project.status === "COMPLETED";
       case "Overdue Payments":
         return project.overdue;
+      case "Deadline":
+        return new Date(project.deadline) < new Date("2024-03-01"); // projects due soon
+      case "Issues":
+        return project.issues > 0;
       default:
         return true;
     }
@@ -113,7 +132,7 @@ export default function BlankPage() {
   return (
     <main className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Tabs Section */}
+        {/* Tabs */}
         <div className="flex flex-wrap gap-3 mb-8">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.name;

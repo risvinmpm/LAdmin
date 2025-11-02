@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Eye, Edit3, Save, X } from "lucide-react";
+import { CalendarDays, Eye, Edit3, Save, X, Clock, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,9 +18,11 @@ interface Project {
   balance: number;
   nextPayment: string;
   overdue: boolean;
-  description: string;
-  startDate: string;
-  endDate: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  deadline?: string;
+  issues?: number;
 }
 
 export default function ProjectCard({ project }: { project: Project }) {
@@ -29,9 +31,9 @@ export default function ProjectCard({ project }: { project: Project }) {
   const [editProject, setEditProject] = useState<Project>(project);
 
   const priorityColors: Record<string, string> = {
-    "HIGH": "bg-red-100 text-red-600",
-    "MEDIUM": "bg-yellow-100 text-yellow-600",
-    "LOW": "bg-green-100 text-green-600",
+    HIGH: "bg-red-100 text-red-600",
+    MEDIUM: "bg-yellow-100 text-yellow-600",
+    LOW: "bg-green-100 text-green-600",
     "High Priority": "bg-red-100 text-red-600",
     "Medium Priority": "bg-yellow-100 text-yellow-600",
     "Low Priority": "bg-green-100 text-green-600",
@@ -42,7 +44,9 @@ export default function ProjectCard({ project }: { project: Project }) {
     COMPLETED: "bg-green-100 text-green-600",
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setEditProject({ ...editProject, [name]: value });
   };
@@ -54,7 +58,7 @@ export default function ProjectCard({ project }: { project: Project }) {
 
   return (
     <>
-      {/* Project Card */}
+      {/* Card */}
       <div className="bg-white shadow rounded-xl p-5 hover:shadow-lg transition-all">
         <div className="flex justify-between items-start mb-3">
           <div>
@@ -62,25 +66,35 @@ export default function ProjectCard({ project }: { project: Project }) {
             <p className="text-sm text-gray-500">{project.client}</p>
           </div>
           <div className="flex gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${priorityColors[project.priority]}`}>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${priorityColors[project.priority]}`}
+            >
               {project.priority}
             </span>
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[project.status]}`}>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[project.status]}`}
+            >
               {project.status}
             </span>
           </div>
         </div>
 
+        {/* Progress */}
         <div className="mb-3">
           <p className="text-sm font-medium text-gray-700">
-            Current Phase: <span className="font-semibold text-gray-800">{project.phase}</span>
+            Current Phase:{" "}
+            <span className="font-semibold text-gray-800">{project.phase}</span>
           </p>
           <div className="h-2 bg-gray-200 rounded-full mt-1">
-            <div className="h-2 bg-blue-600 rounded-full" style={{ width: `${project.progress}%` }} />
+            <div
+              className="h-2 bg-blue-600 rounded-full"
+              style={{ width: `${project.progress}%` }}
+            />
           </div>
           <p className="text-xs text-gray-500 mt-1">{project.progress}%</p>
         </div>
 
+        {/* Financial Summary */}
         <div className="grid grid-cols-3 text-sm mb-3">
           <div>
             <p className="text-gray-500">Total</p>
@@ -92,22 +106,72 @@ export default function ProjectCard({ project }: { project: Project }) {
           </div>
           <div>
             <p className="text-gray-500">Balance</p>
-            <p className={`font-bold ${project.balance === 0 ? "text-gray-400" : "text-orange-500"}`}>
+            <p
+              className={`font-bold ${
+                project.balance === 0 ? "text-gray-400" : "text-orange-500"
+              }`}
+            >
               ${project.balance.toLocaleString()}
             </p>
           </div>
         </div>
 
-        <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md mb-4 ${project.overdue ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
-          }`}>
+        {/* Payment Status */}
+        <div
+          className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md mb-3 ${
+            project.overdue
+              ? "bg-red-50 text-red-600"
+              : "bg-green-50 text-green-600"
+          }`}
+        >
           <CalendarDays size={16} />
           {project.overdue ? (
-            <p>Next Payment: {project.nextPayment} <span className="font-medium">(Overdue)</span></p>
+            <p>
+              Next Payment: {project.nextPayment}{" "}
+              <span className="font-medium">(Overdue)</span>
+            </p>
           ) : (
             <p>Next Payment: {project.nextPayment}</p>
           )}
         </div>
 
+        {/* 🔥 New Section: Deadline + Issues */}
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <div
+            className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
+              project.deadline &&
+              new Date(project.deadline) < new Date()
+                ? "bg-red-50 text-red-600"
+                : "bg-blue-50 text-blue-600"
+            }`}
+          >
+            <Clock size={16} />
+            <p>
+              Deadline:{" "}
+              {project.deadline
+                ? new Date(project.deadline).toLocaleDateString()
+                : "N/A"}
+            </p>
+          </div>
+
+          <div
+            className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
+              project.issues && project.issues > 0
+                ? "bg-yellow-50 text-yellow-700"
+                : "bg-green-50 text-green-600"
+            }`}
+          >
+            <AlertTriangle size={16} />
+            <p>
+              Issues:{" "}
+              <span className="font-medium">
+                {project.issues ?? 0}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Buttons */}
         <div className="flex gap-3">
           <button
             onClick={() => router.push(`/projects/${project.id}`)}
@@ -268,6 +332,34 @@ export default function ProjectCard({ project }: { project: Project }) {
                       type="date"
                       name="endDate"
                       value={editProject.endDate}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Deadline
+                    </label>
+                    <input
+                      type="date"
+                      name="deadline"
+                      value={editProject.deadline || ""}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Issues
+                    </label>
+                    <input
+                      type="number"
+                      name="issues"
+                      min={0}
+                      value={editProject.issues ?? 0}
                       onChange={handleChange}
                       className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
