@@ -5,6 +5,7 @@ import { Calendar, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import ProgressBar from "../../main/ProgressBar";
 import RecentUpdates from "../../main/RecentUpdates";
 import DocumentsTab from "../../main/DocumentsTab";
+import EditableTimeline from "../../main/EditableTimeline";
 
 const projects = [
   {
@@ -98,48 +99,56 @@ export default function ProjectDetailsPage() {
       status: "Completed",
       date: "11/1/2023",
       details: "Initial planning and design phase completed",
+      image: "/timeline/countertop.jpg",
     },
     {
       phase: "Demolition",
       status: "Completed",
       date: "11/15/2023",
       details: "Old kitchen demolished and debris removed",
+      image: "/timeline/countertop.jpg",
     },
     {
       phase: "Electrical Work",
       status: "Completed",
       date: "12/1/2023",
       details: "New electrical wiring and outlets installed",
+      image: "/timeline/countertop.jpg",
     },
     {
       phase: "Plumbing",
       status: "Completed",
       date: "12/15/2023",
       details: "Water lines and gas connections updated",
+      image: "/timeline/countertop.jpg",
     },
     {
       phase: "Carpentry",
       status: "In Progress",
       date: "1/5/2024",
       details: "Custom cabinets installation in progress",
+      image: "/timeline/countertop.jpg",
     },
     {
       phase: "Countertops",
       status: "Pending",
       date: "1/20/2024",
       details: "Granite countertops measurement and installation",
+      image: "/timeline/countertop.jpg",
     },
     {
       phase: "Appliances",
       status: "Pending",
       date: "2/1/2024",
       details: "New appliances delivery and installation",
+      image: "/timeline/countertop.jpg",
     },
     {
       phase: "Final Inspection",
       status: "Pending",
       date: "2/15/2024",
       details: "Quality check and project completion",
+      image: "/timeline/countertop.jpg",
     },
   ];
 
@@ -162,18 +171,18 @@ export default function ProjectDetailsPage() {
           <div className="flex gap-2">
             <span
               className={`px-3 py-1 text-xs font-semibold rounded-full ${project.status === "ACTIVE"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-600"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-600"
                 }`}
             >
               {project.status}
             </span>
             <span
               className={`px-3 py-1 text-xs font-semibold rounded-full ${project.priority === "HIGH"
-                  ? "bg-red-100 text-red-700"
-                  : project.priority === "MEDIUM"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-green-100 text-green-700"
+                ? "bg-red-100 text-red-700"
+                : project.priority === "MEDIUM"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : "bg-green-100 text-green-700"
                 }`}
             >
               {project.priority} Priority
@@ -188,8 +197,8 @@ export default function ProjectDetailsPage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`pb-2 text-sm font-medium transition-colors ${activeTab === tab
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-500 hover:text-blue-600"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-blue-600"
                 }`}
             >
               {tab}
@@ -273,6 +282,95 @@ export default function ProjectDetailsPage() {
         )}
 
         {/* Timeline Tab */}
+        {/* {activeTab === "Timeline" && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                  Project Timeline
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Started: <strong>11/1/2023</strong> &nbsp; | &nbsp; Est. Completion:{" "}
+                  <strong>2/15/2024</strong>
+                </p>
+                <ProgressBar value={project.progress} color="blue" />
+                <p className="text-sm text-gray-500 mt-1 text-right">
+                  {project.progress}% Complete
+                </p>
+              </div>
+
+              <div className="relative border-l-2 border-gray-200 pl-6 space-y-6">
+                {timeline.map((item, i) => {
+                  const statusColor =
+                    item.status === "Completed"
+                      ? "text-green-600 bg-green-100"
+                      : item.status === "In Progress"
+                        ? "text-blue-600 bg-blue-100"
+                        : "text-gray-500 bg-gray-100";
+                  const Icon =
+                    item.status === "Completed"
+                      ? CheckCircle2
+                      : item.status === "In Progress"
+                        ? Clock
+                        : AlertCircle;
+
+                  return (
+                    <div key={i} className="relative">
+                      <span
+                        className={`absolute -left-[31px] top-1 w-6 h-6 flex items-center justify-center rounded-full ${statusColor}`}
+                      >
+                        <Icon size={14} />
+                      </span>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition">
+                        <div className="flex justify-between items-center mb-1">
+                          <h3 className="font-medium text-gray-800">{item.phase}</h3>
+                          <span
+                            className={`text-xs font-semibold px-2 py-1 rounded-full ${item.status === "Completed"
+                              ? "bg-green-100 text-green-700"
+                              : item.status === "In Progress"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-500"
+                              }`}
+                          >
+                            {item.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{item.details}</p>
+                        <p className="text-xs text-gray-400 mt-1">{item.date}</p>
+                      
+                        {item.image && (
+                          <div className="mt-3">
+                            <img
+                              src={item.image}
+                              alt={item.phase}
+                              className="w-36 h-36 object-cover rounded-full border"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+             
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                  Upcoming Milestones
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {upcomingMilestones.map((m, i) => (
+                    <div
+                      key={i}
+                      className="p-4 border rounded-lg bg-blue-50 text-blue-700 flex justify-between items-center"
+                    >
+                      <p className="font-medium">{m.title}</p>
+                      <p className="text-sm">{m.date}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )} */}
         {activeTab === "Timeline" && (
           <div className="space-y-8">
             <div>
@@ -289,67 +387,9 @@ export default function ProjectDetailsPage() {
               </p>
             </div>
 
-            <div className="relative border-l-2 border-gray-200 pl-6 space-y-6">
-              {timeline.map((item, i) => {
-                const statusColor =
-                  item.status === "Completed"
-                    ? "text-green-600 bg-green-100"
-                    : item.status === "In Progress"
-                      ? "text-blue-600 bg-blue-100"
-                      : "text-gray-500 bg-gray-100";
-                const Icon =
-                  item.status === "Completed"
-                    ? CheckCircle2
-                    : item.status === "In Progress"
-                      ? Clock
-                      : AlertCircle;
-
-                return (
-                  <div key={i} className="relative">
-                    <span
-                      className={`absolute -left-[31px] top-1 w-6 h-6 flex items-center justify-center rounded-full ${statusColor}`}
-                    >
-                      <Icon size={14} />
-                    </span>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition">
-                      <div className="flex justify-between items-center mb-1">
-                        <h3 className="font-medium text-gray-800">{item.phase}</h3>
-                        <span
-                          className={`text-xs font-semibold px-2 py-1 rounded-full ${item.status === "Completed"
-                              ? "bg-green-100 text-green-700"
-                              : item.status === "In Progress"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-gray-100 text-gray-500"
-                            }`}
-                        >
-                          {item.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">{item.details}</p>
-                      <p className="text-xs text-gray-400 mt-1">{item.date}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Upcoming Milestones */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                Upcoming Milestones
-              </h3>
-              <div className="grid sm:grid-cols-2 gap-4">
-                {upcomingMilestones.map((m, i) => (
-                  <div
-                    key={i}
-                    className="p-4 border rounded-lg bg-blue-50 text-blue-700 flex justify-between items-center"
-                  >
-                    <p className="font-medium">{m.title}</p>
-                    <p className="text-sm">{m.date}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Editable Timeline */}
+            <EditableTimeline />
+            
           </div>
         )}
 
@@ -473,8 +513,8 @@ export default function ProjectDetailsPage() {
                         <td className="py-2 px-3">
                           <span
                             className={`px-2 py-1 text-xs font-semibold rounded-full ${payment.status === "Completed"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-700"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-yellow-100 text-yellow-700"
                               }`}
                           >
                             {payment.status}
@@ -511,18 +551,18 @@ export default function ProjectDetailsPage() {
             </div>
           </div>
         )}
-        
+
         {activeTab === "Documents" && <DocumentsTab />}
 
 
-          {/* Placeholder tabs */}
+        {/* Placeholder tabs */}
         {/* {activeTab !== "Overview" && activeTab !== "Timeline" && (
-          <div className="text-gray-500 text-center py-10">
-            {activeTab} section coming soon.
-          </div>
-        )} */}
+            <div className="text-gray-500 text-center py-10">
+              {activeTab} section coming soon.
+            </div>
+          )} */}
       </div>
-      
+
     </main>
   );
 }
