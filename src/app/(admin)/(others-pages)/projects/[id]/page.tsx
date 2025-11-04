@@ -93,64 +93,64 @@ export default function ProjectDetailsPage() {
   const tabs = ["Overview", "Timeline", "Payments", "Documents"];
 
   // Timeline data
-  const timeline = [
-    {
-      phase: "Project Started",
-      status: "Completed",
-      date: "11/1/2023",
-      details: "Initial planning and design phase completed",
-      image: "/timeline/countertop.jpg",
-    },
-    {
-      phase: "Demolition",
-      status: "Completed",
-      date: "11/15/2023",
-      details: "Old kitchen demolished and debris removed",
-      image: "/timeline/countertop.jpg",
-    },
-    {
-      phase: "Electrical Work",
-      status: "Completed",
-      date: "12/1/2023",
-      details: "New electrical wiring and outlets installed",
-      image: "/timeline/countertop.jpg",
-    },
-    {
-      phase: "Plumbing",
-      status: "Completed",
-      date: "12/15/2023",
-      details: "Water lines and gas connections updated",
-      image: "/timeline/countertop.jpg",
-    },
-    {
-      phase: "Carpentry",
-      status: "In Progress",
-      date: "1/5/2024",
-      details: "Custom cabinets installation in progress",
-      image: "/timeline/countertop.jpg",
-    },
-    {
-      phase: "Countertops",
-      status: "Pending",
-      date: "1/20/2024",
-      details: "Granite countertops measurement and installation",
-      image: "/timeline/countertop.jpg",
-    },
-    {
-      phase: "Appliances",
-      status: "Pending",
-      date: "2/1/2024",
-      details: "New appliances delivery and installation",
-      image: "/timeline/countertop.jpg",
-    },
-    {
-      phase: "Final Inspection",
-      status: "Pending",
-      date: "2/15/2024",
-      details: "Quality check and project completion",
-      image: "/timeline/countertop.jpg",
-    },
-  ];
+  // const timeline = [
+  //   {
+  //     phase: "Project Started",
+  //     status: "Completed",
+  //     date: "11/1/2023",
+  //     details: "Initial planning and design phase completed",
+  //     image: "/timeline/countertop.jpg",
+  //   },
+  //   {
+  //     phase: "Demolition",
+  //     status: "Completed",
+  //     date: "11/15/2023",
+  //     details: "Old kitchen demolished and debris removed",
+  //     image: "/timeline/countertop.jpg",
+  //   },
+  //   {
+  //     phase: "Electrical Work",
+  //     status: "Completed",
+  //     date: "12/1/2023",
+  //     details: "New electrical wiring and outlets installed",
+  //     image: "/timeline/countertop.jpg",
+  //   },
+  //   {
+  //     phase: "Plumbing",
+  //     status: "Completed",
+  //     date: "12/15/2023",
+  //     details: "Water lines and gas connections updated",
+  //     image: "/timeline/countertop.jpg",
+  //   },
+  //   {
+  //     phase: "Carpentry",
+  //     status: "In Progress",
+  //     date: "1/5/2024",
+  //     details: "Custom cabinets installation in progress",
+  //     image: "/timeline/countertop.jpg",
+  //   },
+  //   {
+  //     phase: "Countertops",
+  //     status: "Pending",
+  //     date: "1/20/2024",
+  //     details: "Granite countertops measurement and installation",
+  //     image: "/timeline/countertop.jpg",
+  //   },
+  //   {
+  //     phase: "Appliances",
+  //     status: "Pending",
+  //     date: "2/1/2024",
+  //     details: "New appliances delivery and installation",
+  //     image: "/timeline/countertop.jpg",
+  //   },
+  //   {
+  //     phase: "Final Inspection",
+  //     status: "Pending",
+  //     date: "2/15/2024",
+  //     details: "Quality check and project completion",
+  //     image: "/timeline/countertop.jpg",
+  //   },
+  // ];
 
   const upcomingMilestones = [
     { title: "Countertops Installation", date: "Jan 20, 2024" },
