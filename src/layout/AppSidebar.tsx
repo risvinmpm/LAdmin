@@ -62,6 +62,7 @@ const navItems: NavItem[] = [
       { name: "Reports", path: "/reports", pro: false },
       { name: "QA Status", path: "/qastatus", pro: false },
       { name: "Clients", path: "/clients", pro: false },
+      { name: "Support", path: "/support", pro: false },
       { name: "404 Error", path: "/error-404", pro: false },
     ],
   },
