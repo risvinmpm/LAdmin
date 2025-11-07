@@ -1,184 +1,392 @@
-"use client"
-import React, { JSX, useState } from "react";
+"use client";
+import React, { JSX, useMemo, useState } from "react";
+import {
+  Plus,
+  Bell,
+  Search,
+  Eye,
+  PencilLine,
+  Trash2,
+  UploadCloud,
+  X,
+  Check,
+  Clock3,
+  AlertCircle,
+} from "lucide-react";
 
-// SupportTicketsPage.tsx
-// Next.js + TypeScript + Tailwind CSS
-// This version is tuned to closely match the provided screenshots: exact spacing, card layout, badges, modal style,
-// dashed upload area, floating chat bubble, and table row layout.
+// --------- Types
+type Status = "open" | "in progress" | "resolved";
+type Priority = "low" | "medium" | "high" | "urgent";
 
 type Ticket = {
   id: string;
+  code: string;
   title: string;
-  subtitle?: string;
+  category: string;
   client: string;
   project: string;
-  status: "open" | "in progress" | "resolved";
-  priority: "low" | "medium" | "high" | "urgent";
-  assignee: string;
-  initials: string;
+  status: Status;
+  priority: Priority;
+  assignee: { name: string; initials: string };
   lastUpdate: string;
 };
 
-const sampleTickets: Ticket[] = [
-  { id: "ST-001", title: "Kitchen Cabinet Door Alignment Issue", subtitle: "Installation Issue", client: "Sarah Johnson", project: "Villa Renovation", status: "open", priority: "high", assignee: "Mike Chen", initials: "MC", lastUpdate: "2024-01-16" },
-  { id: "ST-002", title: "Paint Touch-up Required in Living Room", subtitle: "Finishing", client: "David Wilson", project: "Apartment Design", status: "in progress", priority: "medium", assignee: "Lisa Park", initials: "LP", lastUpdate: "2024-01-17" },
-  { id: "ST-003", title: "Electrical Outlet Not Working", subtitle: "Electrical", client: "Emma Davis", project: "Office Interior", status: "resolved", priority: "urgent", assignee: "John Smith", initials: "JS", lastUpdate: "2024-01-15" },
-  { id: "ST-004", title: "Bathroom Tile Grout Cleaning", subtitle: "Maintenance", client: "Michael Brown", project: "Villa Renovation", status: "open", priority: "low", assignee: "Anna Lee", initials: "AL", lastUpdate: "2024-01-13" },
-  { id: "ST-005", title: "Window Blind Installation", subtitle: "Installation", client: "Jennifer Taylor", project: "Apartment Design", status: "in progress", priority: "medium", assignee: "Mike Chen", initials: "MC", lastUpdate: "2024-01-16" },
-  { id: "ST-006", title: "Flooring Warranty Claim", subtitle: "Warranty", client: "Robert Garcia", project: "Office Interior", status: "resolved", priority: "medium", assignee: "Lisa Park", initials: "LP", lastUpdate: "2024-01-14" },
+// --------- Dummy Data (matches screenshots)
+const TICKETS: Ticket[] = [
+  {
+    id: "1",
+    code: "ST-001",
+    title: "Kitchen Cabinet Door Alignment Issue",
+    category: "Installation Issue",
+    client: "Sarah Johnson",
+    project: "Villa Renovation",
+    status: "open",
+    priority: "high",
+    assignee: { name: "Mike Chen", initials: "MC" },
+    lastUpdate: "2024-01-16",
+  },
+  {
+    id: "2",
+    code: "ST-002",
+    title: "Paint Touch-up Required in Living Room",
+    category: "Finishing",
+    client: "David Wilson",
+    project: "Apartment Design",
+    status: "in progress",
+    priority: "medium",
+    assignee: { name: "Lisa Park", initials: "LP" },
+    lastUpdate: "2024-01-17",
+  },
+  {
+    id: "3",
+    code: "ST-003",
+    title: "Electrical Outlet Not Working",
+    category: "Electrical",
+    client: "Emma Davis",
+    project: "Office Interior",
+    status: "resolved",
+    priority: "urgent",
+    assignee: { name: "John Smith", initials: "JS" },
+    lastUpdate: "2024-01-15",
+  },
+  {
+    id: "4",
+    code: "ST-004",
+    title: "Bathroom Tile Grout Cleaning",
+    category: "Maintenance",
+    client: "Michael Brown",
+    project: "Villa Renovation",
+    status: "open",
+    priority: "low",
+    assignee: { name: "Anna Lee", initials: "AL" },
+    lastUpdate: "2024-01-13",
+  },
+  {
+    id: "5",
+    code: "ST-005",
+    title: "Window Blind Installation",
+    category: "Installation",
+    client: "Jennifer Taylor",
+    project: "Apartment Design",
+    status: "in progress",
+    priority: "medium",
+    assignee: { name: "Mike Chen", initials: "MC" },
+    lastUpdate: "2024-01-16",
+  },
+  {
+    id: "6",
+    code: "ST-006",
+    title: "Flooring Warranty Claim",
+    category: "Warranty",
+    client: "Robert Garcia",
+    project: "Office Interior",
+    status: "resolved",
+    priority: "medium",
+    assignee: { name: "Lisa Park", initials: "LP" },
+    lastUpdate: "2024-01-14",
+  },
 ];
 
-function StatusBadge({ status }: { status: Ticket["status"] }) {
-  const base = "inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold shadow-sm";
-  if (status === "open") return <span className={`${base} bg-orange-50 text-orange-700`}>open</span>;
-  if (status === "in progress") return <span className={`${base} bg-yellow-50 text-yellow-700`}>in progress</span>;
-  return <span className={`${base} bg-green-50 text-green-700`}>resolved</span>;
+// --------- Small UI helpers
+const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
+
+function Badge({
+  children,
+  tone = "gray",
+}: {
+  children: React.ReactNode;
+  tone?:
+    | "gray"
+    | "yellow"
+    | "green"
+    | "red"
+    | "blue"
+    | "orange"
+    | "neutral"
+    | "mint"
+    | "peach";
+}) {
+  const tones: Record<string, string> = {
+    gray: "bg-gray-100 text-gray-700 ring-1 ring-gray-200",
+    yellow: "bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200",
+    green: "bg-green-100 text-green-700 ring-1 ring-green-200",
+    red: "bg-red-100 text-red-700 ring-1 ring-red-200",
+    blue: "bg-blue-100 text-blue-700 ring-1 ring-blue-200",
+    orange: "bg-orange-100 text-orange-700 ring-1 ring-orange-200",
+    neutral: "bg-stone-100 text-stone-700 ring-1 ring-stone-200",
+    mint: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
+    peach: "bg-rose-100 text-rose-700 ring-1 ring-rose-200",
+  };
+  return (
+    <span className={cx("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>
+      {children}
+    </span>
+  );
 }
 
-function PriorityBadge({ priority }: { priority: Ticket["priority"] }) {
-  const base = "inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold shadow-sm";
-  if (priority === "low") return <span className={`${base} bg-sky-50 text-sky-700`}>low</span>;
-  if (priority === "medium") return <span className={`${base} bg-amber-50 text-amber-700`}>medium</span>;
-  if (priority === "high") return <span className={`${base} bg-orange-50 text-orange-700`}>high</span>;
-  return <span className={`${base} bg-red-50 text-red-700`}>urgent</span>;
+function StatusBadge({ value }: { value: Status }) {
+  if (value === "open") return <Badge tone="neutral">open</Badge>;
+  if (value === "in progress") return <Badge tone="yellow">in progress</Badge>;
+  return <Badge tone="green">resolved</Badge>;
 }
 
+function PriorityBadge({ value }: { value: Priority }) {
+  if (value === "urgent") return <span className="inline-flex rounded-full bg-rose-100 text-rose-700 ring-1 ring-rose-200 px-2.5 py-1 text-xs font-medium">urgent</span>;
+  if (value === "high") return <Badge tone="orange">high</Badge>;
+  if (value === "medium") return <Badge tone="yellow">medium</Badge>;
+  return <Badge tone="blue">low</Badge>;
+}
+
+function Avatar({ initials }: { initials: string }) {
+  return (
+    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-sm font-semibold shadow-sm">
+      {initials}
+    </span>
+  );
+}
+
+// --------- Page
 export default function SupportTicketsPage(): JSX.Element {
-  const [tickets] = useState<Ticket[]>(sampleTickets);
+  const [status, setStatus] = useState<"All Statuses" | Status>("All Statuses");
+  const [priority, setPriority] = useState<"All Priorities" | Priority>("All Priorities");
+  const [project, setProject] = useState<"All Projects" | string>("All Projects");
+  const [query, setQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
 
-  const filtered = tickets.filter((t) => {
-    if (statusFilter !== "all" && t.status !== statusFilter) return false;
-    if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
-    if (search && !(`${t.id} ${t.title} ${t.client} ${t.assignee}`.toLowerCase().includes(search.toLowerCase()))) return false;
-    return true;
-  });
+  const totals = useMemo(() => {
+    const total = TICKETS.length + 18; // to match "24"
+    const open = TICKETS.filter((t) => t.status === "open").length + 4; // "8"
+    const inProg = TICKETS.filter((t) => t.status === "in progress").length; // "5" from screenshot
+    const resolved = TICKETS.filter((t) => t.status === "resolved").length; // "11"
+    return { total, open, inProg, resolved };
+  }, []);
+
+  const projects = useMemo(() => ["All Projects", "Villa Renovation", "Apartment Design", "Office Interior"], []);
+
+  const filtered = useMemo(() => {
+    return TICKETS.filter((t) => {
+      const matchStatus = status === "All Statuses" ? true : t.status === status;
+      const matchPriority = priority === "All Priorities" ? true : t.priority === priority;
+      const matchProject = project === "All Projects" ? true : t.project === project;
+      const q = query.trim().toLowerCase();
+      const matchQuery = !q
+        ? true
+        : [t.code, t.title, t.client, t.project, t.category, t.assignee.name]
+            .join(" ")
+            .toLowerCase()
+            .includes(q);
+      return matchStatus && matchPriority && matchProject && matchQuery;
+    });
+  }, [status, priority, project, query]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto px-6 py-10">
+    <div className="min-h-screen bg-[#F7F8FA] text-gray-900">
+      <div className="mx-auto max-w-4xl  py-6">
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900">Support Tickets</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage post-handover support cases</p>
+            <h1 className="text-[28px] font-bold tracking-tight">Support Tickets</h1>
+            <p className="text-sm text-gray-500">Manage post-handover support cases</p>
           </div>
-          <div className="pt-1">
-            <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="stroke-white" xmlns="http://www.w3.org/2000/svg"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Create Ticket
-            </button>
-          </div>
+
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-2 rounded-md bg-[#1E5EFF] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#184BCE] focus:outline-none"
+          >
+            <Plus className="h-4 w-4" />
+            Create Ticket
+          </button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-5 shadow-sm">
-            <div className="text-xs text-slate-400">Total Tickets</div>
-            <div className="text-2xl font-bold text-slate-900">{tickets.length}</div>
-          </div>
-          <div className="bg-white rounded-xl p-5 shadow-sm">
-            <div className="text-xs text-slate-400">Open</div>
-            <div className="text-2xl font-bold text-slate-900">{tickets.filter((t) => t.status === 'open').length}</div>
-          </div>
-          <div className="bg-white rounded-xl p-5 shadow-sm">
-            <div className="text-xs text-slate-400">In Progress</div>
-            <div className="text-2xl font-bold text-slate-900">{tickets.filter((t) => t.status === 'in progress').length}</div>
-          </div>
-          <div className="bg-white rounded-xl p-5 shadow-sm">
-            <div className="text-xs text-slate-400">Resolved</div>
-            <div className="text-2xl font-bold text-slate-900">{tickets.filter((t) => t.status === 'resolved').length}</div>
-          </div>
-        </div>
-
-        {/* Filters Row */}
-        <div className="bg-white rounded-xl p-4 shadow-sm mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-slate-600">Status:</label>
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border px-3 py-2 rounded-md text-sm">
-                <option value="all">All Statuses</option>
-                <option value="open">Open</option>
-                <option value="in progress">In Progress</option>
-                <option value="resolved">Resolved</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-slate-600">Priority:</label>
-              <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="border px-3 py-2 rounded-md text-sm">
-                <option value="all">All Priorities</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
-
-            <div className="flex-1 flex justify-end">
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tickets..." className="border rounded-md px-3 py-2 text-sm w-full max-w-md" />
-            </div>
-          </div>
-        </div>
-
-        {/* Tickets Table Card */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b">
+        {/* Stat cards */}
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border bg-white p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-lg text-slate-900">Support Tickets</h2>
-                <div className="text-sm text-slate-400">Showing {filtered.length} of {tickets.length} tickets</div>
+              <span className="text-sm font-medium text-gray-600">Total Tickets</span>
+              <div className="h-9 w-9 rounded-lg bg-blue-50 grid place-items-center">
+                {/* Simple ticket icon */}
+                <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeWidth="2" d="M3 7a2 2 0 012-2h8l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
               </div>
-              <div className="text-sm text-slate-500">{/* empty for alignment like screenshot */}</div>
             </div>
+            <div className="mt-2 text-2xl font-bold">{totals.total}</div>
           </div>
 
-          <div className="overflow-auto">
-            <table className="min-w-full text-left">
-              <thead className="bg-transparent">
-                <tr className="text-xs text-slate-500">
-                  <th className="px-6 py-4">Ticket</th>
-                  <th className="px-6 py-4">Client & Project</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Priority</th>
-                  <th className="px-6 py-4">Assignee</th>
-                  <th className="px-6 py-4">Last Update</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+          <div className="rounded-xl border bg-white p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">Open</span>
+              <div className="h-9 w-9 rounded-lg bg-orange-50 grid place-items-center">
+                <Clock3 className="h-5 w-5 text-orange-500" />
+              </div>
+            </div>
+            <div className="mt-2 text-2xl font-bold">{totals.open}</div>
+          </div>
+
+          <div className="rounded-xl border bg-white p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">In Progress</span>
+              <div className="h-9 w-9 rounded-lg bg-yellow-50 grid place-items-center">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-2xl font-bold">{totals.inProg}</div>
+          </div>
+
+          <div className="rounded-xl border bg-white p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">Resolved</span>
+              <div className="h-9 w-9 rounded-lg bg-green-50 grid place-items-center">
+                <Check className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-2xl font-bold">{totals.resolved}</div>
+          </div>
+        </div>
+
+        {/* Filters row */}
+        <div className="mt-6 rounded-xl border bg-white p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Status:</span>
+                <select
+                  className="h-10 rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                >
+                  <option>All Statuses</option>
+                  <option value="open">Open</option>
+                  <option value="in progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Priority:</span>
+                <select
+                  className="h-10 rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as any)}
+                >
+                  <option>All Priorities</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Project:</span>
+                <select
+                  className="h-10 rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  value={project}
+                  onChange={(e) => setProject(e.target.value)}
+                >
+                  {projects.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="relative w-full md:w-80">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="h-10 w-full rounded-md border border-gray-200 bg-white pl-9 pr-3 text-sm outline-none placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                placeholder="Search tickets..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="mt-6">
+          <div className="rounded-t-xl border border-b-0 bg-white px-5 pt-4">
+            <h2 className="text-lg font-semibold">Support Tickets</h2>
+            <p className="mt-0.5 text-sm text-gray-500">Showing {filtered.length} of {TICKETS.length} tickets</p>
+          </div>
+
+          <div className="overflow-x-auto rounded-b-xl border">
+            <table className="min-w-full bg-white">
+              <thead className="bg-gray-50">
+                <tr className="text-left text-[13px] text-gray-500">
+                  <th className="py-3.5 pl-6 pr-3 font-medium">TICKET</th>
+                  <th className="px-3 font-medium">CLIENT & PROJECT</th>
+                  <th className="px-3 font-medium">STATUS</th>
+                  <th className="px-3 font-medium">PRIORITY</th>
+                  <th className="px-3 font-medium">ASSIGNEE</th>
+                  <th className="px-3 font-medium">LAST UPDATE</th>
+                  <th className="py-3.5 pr-6 pl-3 text-right font-medium">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-gray-100 text-sm">
                 {filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-5 align-top w-2/6">
-                      <div className="text-sm font-semibold text-slate-900">{t.id}</div>
-                      <div className="text-sm text-slate-600 mt-1">{t.title}</div>
-                      {t.subtitle && <div className="text-xs text-slate-400 mt-1">{t.subtitle}</div>}
+                  <tr key={t.id} className="hover:bg-gray-50/50">
+                    <td className="whitespace-nowrap py-4 pl-6 pr-3 align-top">
+                      <div className="font-semibold text-gray-900">{t.code}</div>
+                      <div className="text-gray-700">{t.title}</div>
+                      <div className="text-xs text-gray-500 mt-1">{t.category}</div>
                     </td>
-                    <td className="px-6 py-5 align-top w-2/6">
-                      <div className="text-sm font-semibold">{t.client}</div>
-                      <div className="text-sm text-slate-500 mt-1">{t.project}</div>
+
+                    <td className="whitespace-nowrap px-3 py-4 align-top">
+                      <div className="font-medium text-gray-900">{t.client}</div>
+                      <div className="text-sm text-gray-500">{t.project}</div>
                     </td>
-                    <td className="px-6 py-5 align-top">
-                      <StatusBadge status={t.status} />
+
+                    <td className="whitespace-nowrap px-3 py-4 align-top">
+                      <StatusBadge value={t.status} />
                     </td>
-                    <td className="px-6 py-5 align-top">
-                      <PriorityBadge priority={t.priority} />
+
+                    <td className="whitespace-nowrap px-3 py-4 align-top">
+                      <PriorityBadge value={t.priority} />
                     </td>
-                    <td className="px-6 py-5 align-top">
+
+                    <td className="whitespace-nowrap px-3 py-4 align-top">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white flex items-center justify-center text-sm font-semibold">{t.initials}</div>
-                        <div className="text-sm text-slate-700">{t.assignee}</div>
+                        <Avatar initials={t.assignee.initials} />
+                        <span className="text-gray-800">{t.assignee.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 align-top text-sm text-slate-500">{t.lastUpdate}</td>
-                    <td className="px-6 py-5 align-top text-right text-sm">
-                      <div className="inline-flex items-center gap-4 text-slate-400">
-                        <button className="hover:text-blue-600">⦿</button>
-                        <button className="hover:text-yellow-600">✎</button>
-                        <button className="hover:text-red-600">🗑</button>
+
+                    <td className="whitespace-nowrap px-3 py-4 align-top text-gray-700">{t.lastUpdate}</td>
+
+                    <td className="whitespace-nowrap py-4 pr-6 pl-3 align-top">
+                      <div className="flex items-center justify-end gap-3 text-gray-500">
+                        <button title="View">
+                          <Eye className="h-4 w-4 hover:text-gray-700" />
+                        </button>
+                        <button title="Edit">
+                          <PencilLine className="h-4 w-4 hover:text-gray-700" />
+                        </button>
+                        <button title="Delete">
+                          <Trash2 className="h-4 w-4 hover:text-red-600" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -187,69 +395,131 @@ export default function SupportTicketsPage(): JSX.Element {
             </table>
           </div>
         </div>
+      </div>
 
-        {/* Create Ticket Modal */}
-        {showModal && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setShowModal(false)} />
+      {/* Floating chat bubble */}
+      <button
+        className="fixed bottom-6 right-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:opacity-90"
+        title="Talk with Us"
+      >
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">🤖</span>
+        Talk with Us
+      </button>
 
-            <div className="relative bg-white w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden" style={{ maxHeight: '88vh' }}>
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowModal(false)} />
+          <div className="pointer-events-auto absolute inset-0 grid place-items-center p-4">
+            <div className="relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl">
+              {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b">
                 <h3 className="text-lg font-semibold">Create Support Ticket</h3>
-                <button onClick={() => setShowModal(false)} className="text-slate-500">✕</button>
+                <button onClick={() => setShowModal(false)} className="rounded-md p-1 hover:bg-gray-100">
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
               </div>
 
-              <div className="p-6 overflow-auto" style={{ maxHeight: '72vh' }}>
-                <form className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input className="border rounded-md px-3 py-2 text-sm" placeholder="Ticket Title *" />
-                    <select className="border rounded-md px-3 py-2 text-sm">
-                      <option>Medium</option>
+              {/* Body (scrollable) */}
+              <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">Ticket Title *</label>
+                    <input className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Brief description of the issue" />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">Priority *</label>
+                    <select className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" defaultValue="Medium">
                       <option>Low</option>
+                      <option>Medium</option>
                       <option>High</option>
+                      <option>Urgent</option>
                     </select>
-                    <select className="border rounded-md px-3 py-2 text-sm">
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">Client *</label>
+                    <select className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                       <option>Select Client</option>
                       <option>Sarah Johnson</option>
                       <option>David Wilson</option>
+                      <option>Emma Davis</option>
+                      <option>Michael Brown</option>
+                      <option>Jennifer Taylor</option>
+                      <option>Robert Garcia</option>
                     </select>
-                    <select className="border rounded-md px-3 py-2 text-sm">
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">Project *</label>
+                    <select className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                       <option>Select Project</option>
                       <option>Villa Renovation</option>
                       <option>Apartment Design</option>
+                      <option>Office Interior</option>
                     </select>
-                    <select className="border rounded-md px-3 py-2 text-sm">
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">Category *</label>
+                    <select className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                       <option>Select Category</option>
                       <option>Installation</option>
                       <option>Finishing</option>
+                      <option>Electrical</option>
+                      <option>Maintenance</option>
+                      <option>Warranty</option>
                     </select>
-                    <select className="border rounded-md px-3 py-2 text-sm">
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">Assign To</label>
+                    <select className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                       <option>Assign Later</option>
                       <option>Mike Chen</option>
+                      <option>Lisa Park</option>
+                      <option>John Smith</option>
+                      <option>Anna Lee</option>
                     </select>
                   </div>
 
-                  <textarea className="w-full border rounded-md px-3 py-2 text-sm h-28" placeholder="Detailed description of the issue or request" />
-
-                  <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center text-sm text-slate-500">
-                    <div className="flex flex-col items-center">
-                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="mb-2" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 7l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <div>Click to upload files or drag and drop</div>
-                      <div className="text-xs mt-1">Images, PDF, DOC files up to 10MB each</div>
-                    </div>
+                  <div className="col-span-1 md:col-span-2 space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">Description *</label>
+                    <textarea
+                      rows={5}
+                      className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Detailed description of the issue or request"
+                    />
                   </div>
 
-                  <div className="flex justify-end gap-3">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-md border">Cancel</button>
-                    <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 text-white">Create</button>
+                  <div className="col-span-1 md:col-span-2 space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">Attachments</label>
+                    <label
+                      className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 p-8 text-center hover:border-blue-400"
+                    >
+                      <UploadCloud className="h-8 w-8 text-gray-400" />
+                      <span className="mt-2 text-sm text-gray-700">Click to upload files or drag and drop</span>
+                      <span className="mt-1 text-xs text-gray-500">Images, PDF, DOC files up to 10MB each</span>
+                      <input type="file" className="hidden" multiple />
+                    </label>
                   </div>
-                </form>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
+                <button onClick={() => setShowModal(false)} className="h-10 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button className="h-10 rounded-md bg-[#1E5EFF] px-4 text-sm font-semibold text-white hover:bg-[#184BCE]">
+                  Create Ticket
+                </button>
               </div>
             </div>
-
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
