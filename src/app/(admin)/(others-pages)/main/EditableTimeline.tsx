@@ -195,9 +195,27 @@ export default function EditableTimeline() {
     e.target.value = "";
   };
 
+  // REMOVE IMAGE from existing timeline
+  const handleRemoveImage = (index: number, imgIndex: number) => {
+    setTimeline((prev) => {
+      const updated = [...prev];
+      updated[index].images = updated[index].images.filter(
+        (_, i) => i !== imgIndex
+      );
+      return updated;
+    });
+  };
+
+  // REMOVE IMAGE from new phase before saving
+  const handleRemoveNewImage = (imgIndex: number) => {
+    setNewPhase((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== imgIndex),
+    }));
+  };
+
   return (
     <div className="space-y-8">
-
       {/* Timeline List */}
       <div className="relative border-l-2 border-gray-200 pl-6 space-y-6">
         {timeline.map((item, i) => {
@@ -225,7 +243,7 @@ export default function EditableTimeline() {
               </span>
 
               {editingIndex === i ? (
-                // ✅ Edit Mode
+                // EDIT MODE
                 <div className="bg-white border rounded-lg p-4 shadow-sm space-y-2">
                   <input
                     value={item.phase}
@@ -274,14 +292,22 @@ export default function EditableTimeline() {
                     className="border p-2 rounded w-full text-sm"
                   />
 
+                  {/* images with remove button */}
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {item.images?.map((img, index) => (
-                      <img
-                        key={index}
-                        src={img}
-                        alt="preview"
-                        className="w-20 h-20 object-cover rounded border"
-                      />
+                    {item.images?.map((img, imgIndex) => (
+                      <div key={imgIndex} className="relative">
+                        <img
+                          src={img}
+                          alt="preview"
+                          className="w-20 h-20 object-cover rounded border"
+                        />
+                        <button
+                          onClick={() => handleRemoveImage(i, imgIndex)}
+                          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-[2px] hover:bg-red-700"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     ))}
                   </div>
 
@@ -293,7 +319,7 @@ export default function EditableTimeline() {
                   </button>
                 </div>
               ) : (
-                // ✅ View Mode
+                // VIEW MODE
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition">
                   <div className="flex justify-between items-center mb-1">
                     <h3 className="font-medium text-gray-800">{item.phase}</h3>
@@ -311,11 +337,17 @@ export default function EditableTimeline() {
                         {item.status}
                       </span>
 
-                      <button onClick={() => setEditingIndex(i)} className="text-blue-500 hover:text-blue-700">
+                      <button
+                        onClick={() => setEditingIndex(i)}
+                        className="text-blue-500 hover:text-blue-700"
+                      >
                         <Edit2 size={16} />
                       </button>
 
-                      <button onClick={() => handleDelete(i)} className="text-red-500 hover:text-red-700">
+                      <button
+                        onClick={() => handleDelete(i)}
+                        className="text-red-500 hover:text-red-700"
+                      >
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -343,7 +375,7 @@ export default function EditableTimeline() {
         })}
       </div>
 
-      {/* ✅ Add New Phase Form */}
+      {/* Add New Phase */}
       <div className="bg-blue-50 border rounded-lg p-4">
         <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
           <Plus size={16} /> Add New Phase
@@ -353,13 +385,17 @@ export default function EditableTimeline() {
           <input
             placeholder="Phase name"
             value={newPhase.phase}
-            onChange={(e) => setNewPhase({ ...newPhase, phase: e.target.value })}
+            onChange={(e) =>
+              setNewPhase({ ...newPhase, phase: e.target.value })
+            }
             className="border p-2 rounded text-sm"
           />
 
           <select
             value={newPhase.status}
-            onChange={(e) => setNewPhase({ ...newPhase, status: e.target.value })}
+            onChange={(e) =>
+              setNewPhase({ ...newPhase, status: e.target.value })
+            }
             className="border p-2 rounded text-sm"
           >
             <option>Pending</option>
@@ -370,7 +406,9 @@ export default function EditableTimeline() {
           <input
             type="date"
             value={newPhase.date}
-            onChange={(e) => setNewPhase({ ...newPhase, date: e.target.value })}
+            onChange={(e) =>
+              setNewPhase({ ...newPhase, date: e.target.value })
+            }
             className="border p-2 rounded text-sm"
           />
 
@@ -383,15 +421,24 @@ export default function EditableTimeline() {
           />
         </div>
 
+        {/* New Phase Preview with Remove */}
         {newPhase.images.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
-            {newPhase.images.map((img, index) => (
-              <img
-                key={index}
-                src={img}
-                alt="preview"
-                className="w-24 h-24 object-cover rounded border"
-              />
+            {newPhase.images.map((img, imgIndex) => (
+              <div key={imgIndex} className="relative">
+                <img
+                  src={img}
+                  alt="preview"
+                  className="w-24 h-24 object-cover rounded border"
+                />
+
+                <button
+                  onClick={() => handleRemoveNewImage(imgIndex)}
+                  className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-[2px] hover:bg-red-700"
+                >
+                  <X size={12} />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -399,7 +446,9 @@ export default function EditableTimeline() {
         <textarea
           placeholder="Details"
           value={newPhase.details}
-          onChange={(e) => setNewPhase({ ...newPhase, details: e.target.value })}
+          onChange={(e) =>
+            setNewPhase({ ...newPhase, details: e.target.value })
+          }
           className="border p-2 rounded text-sm w-full mt-3"
         />
 
