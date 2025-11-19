@@ -397,15 +397,6 @@ export default function SupportTicketsPage(): JSX.Element {
         </div>
       </div>
 
-      {/* Floating chat bubble */}
-      <button
-        className="fixed bottom-6 right-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:opacity-90"
-        title="Talk with Us"
-      >
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">🤖</span>
-        Talk with Us
-      </button>
-
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50">
