@@ -174,10 +174,10 @@ export default function SupportTicketsPage(): JSX.Element {
   const [showModal, setShowModal] = useState(false);
 
   const totals = useMemo(() => {
-    const total = TICKETS.length + 18; // to match "24"
-    const open = TICKETS.filter((t) => t.status === "open").length + 4; // "8"
-    const inProg = TICKETS.filter((t) => t.status === "in progress").length; // "5" from screenshot
-    const resolved = TICKETS.filter((t) => t.status === "resolved").length; // "11"
+    const total = TICKETS.length + 18; 
+    const open = TICKETS.filter((t) => t.status === "open").length + 4; 
+    const inProg = TICKETS.filter((t) => t.status === "in progress").length; 
+    const resolved = TICKETS.filter((t) => t.status === "resolved").length;
     return { total, open, inProg, resolved };
   }, []);
 
@@ -201,7 +201,7 @@ export default function SupportTicketsPage(): JSX.Element {
 
   return (
     <div className="min-h-screen bg-[#F7F8FA] text-gray-900">
-      <div className="mx-auto max-w-4xl  py-6">
+      <div className="mx-auto w-full  py-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

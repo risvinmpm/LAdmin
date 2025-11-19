@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Calendar, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import ProgressBar from "../../main/ProgressBar";
 import RecentUpdates from "../../main/RecentUpdates";
-import DocumentsTab from "../../main/DocumentsTab";
+// import DocumentsTab from "../../main/DocumentsTab";
 import EditableTimeline from "../../main/EditableTimeline";
 
 const projects = [
@@ -90,7 +90,7 @@ export default function ProjectDetailsPage() {
   }
 
   const paymentPercent = Math.round((project.paid / project.total) * 100);
-  const tabs = ["Overview", "Timeline", "Payments", "Documents"];
+  const tabs = ["Overview", "Timeline", "Payments"];
 
   // Timeline data
   // const timeline = [
@@ -552,7 +552,7 @@ export default function ProjectDetailsPage() {
           </div>
         )}
 
-        {activeTab === "Documents" && <DocumentsTab />}
+        {/* {activeTab === "Documents" && <DocumentsTab />} */}
 
 
         {/* Placeholder tabs */}
