@@ -11,6 +11,7 @@ import {
   Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Swal from "sweetalert2";
 
 interface Payment {
   id: string;
@@ -89,8 +90,13 @@ export default function PaymentsPage() {
   const [search, setSearch] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
+  // ADDED FOR EDIT MODE
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<any>(null);
+  const [payments, setPayments] = useState(paymentsData);
+
   const filteredPayments = useMemo(() => {
-    return paymentsData.filter((p) => {
+    return payments.filter((p) => {
       const matchesStatus =
         statusFilter === "All Payments" || p.status === statusFilter;
       const matchesProject =
@@ -102,7 +108,7 @@ export default function PaymentsPage() {
         p.id.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesProject && matchesPhase && matchesSearch;
     });
-  }, [statusFilter, projectFilter, phaseFilter, search]);
+  }, [statusFilter, projectFilter, phaseFilter, search, payments]);
 
   return (
     <div className="p-6 space-y-6">
@@ -162,7 +168,7 @@ export default function PaymentsPage() {
             onChange={(e) => setProjectFilter(e.target.value)}
           >
             <option>All Projects</option>
-            {Array.from(new Set(paymentsData.map((p) => p.project))).map(
+            {Array.from(new Set(payments.map((p) => p.project))).map(
               (project) => (
                 <option key={project}>{project}</option>
               )
@@ -175,11 +181,9 @@ export default function PaymentsPage() {
             onChange={(e) => setPhaseFilter(e.target.value)}
           >
             <option>All Phases</option>
-            {Array.from(new Set(paymentsData.map((p) => p.phase))).map(
-              (phase) => (
-                <option key={phase}>{phase}</option>
-              )
-            )}
+            {Array.from(new Set(payments.map((p) => p.phase))).map((phase) => (
+              <option key={phase}>{phase}</option>
+            ))}
           </select>
         </div>
 
@@ -275,7 +279,10 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Payment Details Modal */}
+      {/* ---------------------------------------------------------------------- */}
+      {/*  PAYMENT DETAILS MODAL + ACTIONS + SWEETALERT INTEGRATION              */}
+      {/* ---------------------------------------------------------------------- */}
+
       <AnimatePresence>
         {selectedPayment && (
           <motion.div
@@ -285,89 +292,542 @@ export default function PaymentsPage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-xl shadow-xl w-[600px] p-6 relative"
+              className="bg-white rounded-xl shadow-xl w-[950px] p-8 relative"
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
+              {/* Close Button */}
               <button
                 className="absolute top-4 right-4 text-gray-500 hover:text-red-500"
-                onClick={() => setSelectedPayment(null)}
+                onClick={() => {
+                  setIsEditing(false);
+                  setSelectedPayment(null);
+                }}
               >
-                <X size={18} />
+                <X size={20} />
               </button>
 
-              <h2 className="text-lg font-semibold mb-2">
-                Payment Details
-              </h2>
-              <p className="text-sm text-gray-500 mb-4">
-                Payment ID: {selectedPayment.id}
-              </p>
+              {/* ========================= EDIT MODE SECTION ========================= */}
+              {isEditing && (
+                <>
+                  <h2 className="text-xl font-semibold mb-1">Edit Payment</h2>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Update payment details below
+                  </p>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium mb-2">Payment Information</h3>
-                  <p>Status: <StatusBadge status={selectedPayment.status} /></p>
-                  <p>Amount: ₹{selectedPayment.amount.toLocaleString()}</p>
-                  <p>Due Date: {selectedPayment.dueDate}</p>
-                  {selectedPayment.paymentDate && (
-                    <p>Paid Date: {selectedPayment.paymentDate}</p>
-                  )}
-                  {selectedPayment.method && (
-                    <p>Method: {selectedPayment.method}</p>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="font-medium mb-2">Client & Project</h3>
-                  <p>Client: {selectedPayment.client}</p>
-                  <p>Project: {selectedPayment.project}</p>
-                  <p>Phase: {selectedPayment.phase}</p>
-                </div>
-              </div>
-
-              <div className="mt-6 border-t pt-4">
-                <h3 className="font-medium mb-3">Payment Timeline</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start gap-2">
-                    <Clock className="text-blue-500 mt-0.5" size={16} />
-                    <div>
-                      <p className="font-medium text-gray-700">
-                        Payment Created
-                      </p>
-                      <p className="text-gray-500 text-xs">
-                        Record created for {selectedPayment.phase}
-                      </p>
-                    </div>
-                  </div>
-                  {selectedPayment.paymentDate && (
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2
-                        className="text-green-600 mt-0.5"
-                        size={16}
-                      />
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* LEFT SIDE */}
+                    <div className="space-y-5">
+                      {/* Status */}
                       <div>
-                        <p className="font-medium text-gray-700">
-                          Payment Received
-                        </p>
-                        <p className="text-gray-500 text-xs">
-                          Full/Partial payment received on{" "}
-                          {selectedPayment.paymentDate}
-                        </p>
+                        <label className="text-sm font-medium">Status</label>
+                        <select
+                          className="border border-gray-300 rounded-md p-2 w-full"
+                          value={editForm.status}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              status: e.target.value,
+                            })
+                          }
+                        >
+                          <option>Paid</option>
+                          <option>Pending</option>
+                          <option>Overdue</option>
+                          <option>Partial</option>
+                        </select>
+                      </div>
+
+                      {/* Amount */}
+                      <div>
+                        <label className="text-sm font-medium">Amount</label>
+                        <input
+                          type="number"
+                          value={editForm.amount}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              amount: Number(e.target.value),
+                            })
+                          }
+                          className="border w-full rounded-md p-2"
+                        />
+                      </div>
+
+                      {/* Partial Paid */}
+                      {editForm.status === "Partial" && (
+                        <div>
+                          <label className="text-sm font-medium">
+                            Paid Amount
+                          </label>
+                          <input
+                            type="number"
+                            value={editForm.paidAmount || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                paidAmount: Number(e.target.value),
+                              })
+                            }
+                            className="border w-full rounded-md p-2"
+                          />
+                        </div>
+                      )}
+
+                      {/* Method */}
+                      <div>
+                        <label className="text-sm font-medium">
+                          Payment Method
+                        </label>
+                        <select
+                          className="border border-gray-300 rounded-md p-2 w-full"
+                          value={editForm.method || ""}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              method: e.target.value,
+                            })
+                          }
+                        >
+                          <option>Bank Transfer</option>
+                          <option>UPI</option>
+                          <option>Cash</option>
+                          <option>Cheque</option>
+                        </select>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              <div className="mt-6 flex justify-end gap-3">
-                <button className="bg-gray-100 px-4 py-2 rounded-md hover:bg-gray-200">
-                  Download Invoice
-                </button>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                  Edit Payment
-                </button>
-              </div>
+                    {/* RIGHT SIDE */}
+                    <div className="space-y-5">
+                      <div>
+                        <label className="text-sm font-medium">Phase</label>
+                        <input
+                          type="text"
+                          value={editForm.phase}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              phase: e.target.value,
+                            })
+                          }
+                          className="border w-full rounded-md p-2"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Due Date</label>
+                        <input
+                          type="date"
+                          value={editForm.dueDate}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              dueDate: e.target.value,
+                            })
+                          }
+                          className="border w-full rounded-md p-2"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Paid Date</label>
+                        <input
+                          type="date"
+                          value={editForm.paymentDate || ""}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              paymentDate: e.target.value,
+                            })
+                          }
+                          className="border w-full rounded-md p-2"
+                        />
+                      </div>
+
+                      {editForm.status === "Overdue" && (
+                        <div>
+                          <label className="text-sm font-medium">
+                            Overdue Days
+                          </label>
+                          <input
+                            type="number"
+                            value={editForm.overdueDays || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                overdueDays: Number(e.target.value),
+                              })
+                            }
+                            className="border w-full rounded-md p-2"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ACTION BUTTONS */}
+                  <div className="mt-8 flex justify-end gap-3">
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="bg-gray-100 px-4 py-2 rounded-md hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        Swal.fire({
+                          title: "Save Changes?",
+                          text: "These payment details will be updated.",
+                          icon: "warning",
+                          showCancelButton: true,
+                          confirmButtonText: "Save",
+                        }).then((res) => {
+                          if (res.isConfirmed) {
+                            setPayments((prev) =>
+                              prev.map((p) =>
+                                p.id === editForm.id ? editForm : p
+                              )
+                            );
+
+                            setSelectedPayment(editForm);
+                            setIsEditing(false);
+
+                            Swal.fire(
+                              "Updated!",
+                              "Payment updated successfully.",
+                              "success"
+                            );
+                          }
+                        });
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* ========================= NORMAL VIEW MODE ========================= */}
+              {!isEditing && (
+                <>
+                  {/* Header */}
+                  <h2 className="text-xl font-semibold">Payment Details</h2>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Payment ID: {selectedPayment.id}
+                  </p>
+
+                  {/* GRID 2 COL */}
+                  <div className="grid grid-cols-2 gap-8">
+                    {/* LEFT SECTION */}
+                    <div className="space-y-6">
+                      {/* Payment Info */}
+                      <div>
+                        <h3 className="font-semibold mb-3">
+                          Payment Information
+                        </h3>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`
+                                px-3 py-1 rounded-md text-xs font-medium flex items-center gap-1
+                                ${
+                                  selectedPayment.status === "Paid"
+                                    ? "bg-green-100 text-green-700"
+                                    : selectedPayment.status === "Pending"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : selectedPayment.status === "Overdue"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-blue-100 text-blue-700"
+                                }
+                              `}
+                            >
+                              {selectedPayment.status === "Paid" && (
+                                <CheckCircle2 size={14} />
+                              )}
+                              {selectedPayment.status}
+                            </span>
+                          </div>
+
+                          <p className="text-[15px]">
+                            Amount:{" "}
+                            <span className="font-semibold">
+                              ₹{selectedPayment.amount.toLocaleString()}
+                            </span>
+                          </p>
+
+                          {selectedPayment.status === "Partial" &&
+                            selectedPayment.paidAmount && (
+                              <p className="text-green-600 text-[15px]">
+                                Paid Amount: ₹
+                                {selectedPayment.paidAmount.toLocaleString()}
+                              </p>
+                            )}
+
+                          <p className="text-[15px]">
+                            Due Date: {selectedPayment.dueDate}
+                          </p>
+
+                          {selectedPayment.paymentDate && (
+                            <p className="text-[15px]">
+                              Paid Date: {selectedPayment.paymentDate}
+                            </p>
+                          )}
+
+                          {selectedPayment.method && (
+                            <p className="text-[15px]">
+                              Payment Method: {selectedPayment.method}
+                            </p>
+                          )}
+
+                          {selectedPayment.status === "Overdue" &&
+                            selectedPayment.overdueDays && (
+                              <p className="text-red-600 text-[15px]">
+                                {selectedPayment.overdueDays} days overdue
+                              </p>
+                            )}
+                        </div>
+                      </div>
+
+                      {/* Client Info */}
+                      <div>
+                        <h3 className="font-semibold mb-3">
+                          Client & Project
+                        </h3>
+                        <div className="space-y-1 text-sm">
+                          <p>
+                            Client:{" "}
+                            <span className="font-medium">
+                              {selectedPayment.client}
+                            </span>
+                          </p>
+                          <p>Project: {selectedPayment.project}</p>
+                          <p>Phase: {selectedPayment.phase}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RIGHT SECTION */}
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold mb-3">
+                          Payment Timeline
+                        </h3>
+
+                        <div className="space-y-4 text-sm">
+                          <div className="flex items-start gap-2">
+                            <Plus
+                              className="text-blue-500 mt-0.5"
+                              size={18}
+                            />
+                            <div>
+                              <p className="font-medium text-gray-700">
+                                Payment Created
+                              </p>
+                              <p className="text-gray-500 text-xs">
+                                Record created for {selectedPayment.phase}
+                              </p>
+                            </div>
+                          </div>
+
+                          {(selectedPayment.status === "Paid" ||
+                            selectedPayment.status === "Partial") && (
+                            <div className="flex items-start gap-2">
+                              <CheckCircle2
+                                className="text-green-600 mt-0.5"
+                                size={18}
+                              />
+                              <div>
+                                <p className="font-medium text-gray-700">
+                                  Payment Received
+                                </p>
+                                <p className="text-gray-500 text-xs">
+                                  {selectedPayment.status === "Paid"
+                                    ? "Full payment received"
+                                    : "Partial payment received"}{" "}
+                                  on {selectedPayment.paymentDate}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedPayment.status === "Overdue" && (
+                            <div className="flex items-start gap-2">
+                              <Clock
+                                className="text-red-500 mt-0.5"
+                                size={18}
+                              />
+                              <div>
+                                <p className="font-medium text-gray-700">
+                                  Payment Overdue
+                                </p>
+                                <p className="text-gray-500 text-xs">
+                                  Due date passed ({selectedPayment.dueDate})
+                                  <br />
+                                  {selectedPayment.overdueDays} days overdue.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="font-semibold mb-3">
+                          Project Payment Progress
+                        </h3>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Advance Payment</span>
+                            <span className="text-green-600 font-medium">
+                              ✓ Paid
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between">
+                            <span>Design Phase</span>
+                            <span className="text-green-600 font-medium">
+                              ✓ Paid
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between">
+                            <span>Construction</span>
+                            <span className="text-blue-600 font-medium">
+                              • Current
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between">
+                            <span>Finishing</span>
+                            <span className="text-gray-400">Pending</span>
+                          </div>
+
+                          <div className="flex justify-between">
+                            <span>Final Payment</span>
+                            <span className="text-gray-400">Pending</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ACTION BUTTONS */}
+                  <div className="mt-8 flex justify-end gap-3">
+                    {selectedPayment.status === "Pending" && (
+                      <button
+                        onClick={() => {
+                          Swal.fire({
+                            title: "Mark as Paid?",
+                            text: "This payment will be marked as fully paid.",
+                            icon: "warning",
+                            showCancelButton: true,
+                            confirmButtonText: "Yes, mark paid",
+                          }).then((res) => {
+                            if (res.isConfirmed) {
+                              Swal.fire(
+                                "Success",
+                                "Payment marked as paid!",
+                                "success"
+                              );
+                            }
+                          });
+                        }}
+                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                      >
+                        Mark as Paid
+                      </button>
+                    )}
+
+                    {selectedPayment.status === "Overdue" && (
+                      <button
+                        onClick={() => {
+                          Swal.fire({
+                            title: "Send Reminder?",
+                            text: `Send payment reminder email to ${selectedPayment.client}?`,
+                            icon: "info",
+                            showCancelButton: true,
+                            confirmButtonText: "Send Reminder",
+                          }).then((res) => {
+                            if (res.isConfirmed) {
+                              Swal.fire(
+                                "Sent!",
+                                "Reminder email sent successfully.",
+                                "success"
+                              );
+                            }
+                          });
+                        }}
+                        className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700"
+                      >
+                        Send Reminder
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        Swal.fire({
+                          title: "Export Invoice",
+                          html: `
+                          <div style="display:flex;flex-direction:column;gap:10px;text-align:left;">
+                            <button id="download" style="padding:8px 12px;border-radius:6px;border:1px solid #ddd;">Download Invoice</button>
+                            <button id="print" style="padding:8px 12px;border-radius:6px;border:1px solid #ddd;">Print Invoice</button>
+                            <button id="preview" style="padding:8px 12px;border-radius:6px;border:1px solid #ddd;">Preview Invoice</button>
+                          </div>
+                        `,
+                          showConfirmButton: false,
+                        });
+
+                        setTimeout(() => {
+                          document
+                            .getElementById("download")
+                            ?.addEventListener("click", () =>
+                              Swal.fire(
+                                "Downloaded",
+                                "Invoice downloaded successfully.",
+                                "success"
+                              )
+                            );
+                          document
+                            .getElementById("print")
+                            ?.addEventListener("click", () =>
+                              Swal.fire(
+                                "Printing...",
+                                "Invoice sent to printer.",
+                                "success"
+                              )
+                            );
+                          document
+                            .getElementById("preview")
+                            ?.addEventListener("click", () =>
+                              Swal.fire(
+                                "Preview Opened",
+                                "Invoice preview opened.",
+                                "success"
+                              )
+                            );
+                        }, 10);
+                      }}
+                      className="bg-gray-100 px-4 py-2 rounded-md hover:bg-gray-200"
+                    >
+                      Export Invoice
+                    </button>
+
+                    <button
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                      onClick={() => {
+                        setEditForm(selectedPayment);
+                        setIsEditing(true);
+                      }}
+                    >
+                      Edit Payment
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
