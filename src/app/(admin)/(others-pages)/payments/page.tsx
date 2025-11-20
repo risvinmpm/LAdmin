@@ -11,6 +11,7 @@ import {
   Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Swal from "sweetalert2";
 
 interface Payment {
   id: string;
@@ -275,7 +276,10 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Payment Details Modal */}
+      {/* ---------------------------------------------------------------------- */}
+      {/*  PAYMENT DETAILS MODAL + ACTIONS + SWEETALERT INTEGRATION              */}
+      {/* ---------------------------------------------------------------------- */}
+
       <AnimatePresence>
         {selectedPayment && (
           <motion.div
@@ -285,85 +289,271 @@ export default function PaymentsPage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-xl shadow-xl w-[600px] p-6 relative"
+              className="bg-white rounded-xl shadow-xl w-[950px] p-8 relative"
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
+              {/* Close Button */}
               <button
                 className="absolute top-4 right-4 text-gray-500 hover:text-red-500"
                 onClick={() => setSelectedPayment(null)}
               >
-                <X size={18} />
+                <X size={20} />
               </button>
 
-              <h2 className="text-lg font-semibold mb-2">
-                Payment Details
-              </h2>
-              <p className="text-sm text-gray-500 mb-4">
+              {/* Header */}
+              <h2 className="text-xl font-semibold">Payment Details</h2>
+              <p className="text-sm text-gray-500 mb-6">
                 Payment ID: {selectedPayment.id}
               </p>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium mb-2">Payment Information</h3>
-                  <p>Status: <StatusBadge status={selectedPayment.status} /></p>
-                  <p>Amount: ₹{selectedPayment.amount.toLocaleString()}</p>
-                  <p>Due Date: {selectedPayment.dueDate}</p>
-                  {selectedPayment.paymentDate && (
-                    <p>Paid Date: {selectedPayment.paymentDate}</p>
-                  )}
-                  {selectedPayment.method && (
-                    <p>Method: {selectedPayment.method}</p>
-                  )}
-                </div>
+              {/* GRID 2 COL */}
+              <div className="grid grid-cols-2 gap-8">
 
-                <div>
-                  <h3 className="font-medium mb-2">Client & Project</h3>
-                  <p>Client: {selectedPayment.client}</p>
-                  <p>Project: {selectedPayment.project}</p>
-                  <p>Phase: {selectedPayment.phase}</p>
-                </div>
-              </div>
+                {/* LEFT SECTION */}
+                <div className="space-y-6">
 
-              <div className="mt-6 border-t pt-4">
-                <h3 className="font-medium mb-3">Payment Timeline</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start gap-2">
-                    <Clock className="text-blue-500 mt-0.5" size={16} />
-                    <div>
-                      <p className="font-medium text-gray-700">
-                        Payment Created
+                  {/* Payment Info */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Payment Information</h3>
+                    <div className="space-y-1 text-sm">
+
+                      {/* Status Badge */}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`
+                      px-3 py-1 rounded-md text-xs font-medium flex items-center gap-1
+                      ${selectedPayment.status === "Paid"
+                              ? "bg-green-100 text-green-700"
+                              : selectedPayment.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : selectedPayment.status === "Overdue"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-blue-100 text-blue-700"
+                            }
+                    `}
+                        >
+                          {selectedPayment.status === "Paid" && (
+                            <CheckCircle2 size={14} />
+                          )}
+                          {selectedPayment.status}
+                        </span>
+                      </div>
+
+                      <p className="text-[15px]">
+                        Amount:{" "}
+                        <span className="font-semibold">
+                          ₹{selectedPayment.amount.toLocaleString()}
+                        </span>
                       </p>
-                      <p className="text-gray-500 text-xs">
-                        Record created for {selectedPayment.phase}
-                      </p>
+
+                      {selectedPayment.status === "Partial" &&
+                        selectedPayment.paidAmount && (
+                          <p className="text-green-600 text-[15px]">
+                            Paid Amount: ₹{selectedPayment.paidAmount.toLocaleString()}
+                          </p>
+                        )}
+
+                      <p className="text-[15px]">Due Date: {selectedPayment.dueDate}</p>
+
+                      {selectedPayment.paymentDate && (
+                        <p className="text-[15px]">Paid Date: {selectedPayment.paymentDate}</p>
+                      )}
+
+                      {selectedPayment.method && (
+                        <p className="text-[15px]">Payment Method: {selectedPayment.method}</p>
+                      )}
+
+                      {selectedPayment.status === "Overdue" &&
+                        selectedPayment.overdueDays && (
+                          <p className="text-red-600 text-[15px]">
+                            {selectedPayment.overdueDays} days overdue
+                          </p>
+                        )}
                     </div>
                   </div>
-                  {selectedPayment.paymentDate && (
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2
-                        className="text-green-600 mt-0.5"
-                        size={16}
-                      />
-                      <div>
-                        <p className="font-medium text-gray-700">
-                          Payment Received
-                        </p>
-                        <p className="text-gray-500 text-xs">
-                          Full/Partial payment received on{" "}
-                          {selectedPayment.paymentDate}
-                        </p>
+
+                  {/* Client Info */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Client & Project</h3>
+                    <div className="space-y-1 text-sm">
+                      <p>Client: <span className="font-medium">{selectedPayment.client}</span></p>
+                      <p>Project: {selectedPayment.project}</p>
+                      <p>Phase: {selectedPayment.phase}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT SECTION */}
+                <div className="space-y-6">
+
+                  {/* Timeline */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Payment Timeline</h3>
+
+                    <div className="space-y-4 text-sm">
+
+                      {/* Created */}
+                      <div className="flex items-start gap-2">
+                        <Plus className="text-blue-500 mt-0.5" size={18} />
+                        <div>
+                          <p className="font-medium text-gray-700">Payment Created</p>
+                          <p className="text-gray-500 text-xs">
+                            Record created for {selectedPayment.phase}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Received (Paid + Partial) */}
+                      {(selectedPayment.status === "Paid" ||
+                        selectedPayment.status === "Partial") && (
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="text-green-600 mt-0.5" size={18} />
+                            <div>
+                              <p className="font-medium text-gray-700">
+                                Payment Received
+                              </p>
+                              <p className="text-gray-500 text-xs">
+                                {selectedPayment.status === "Paid"
+                                  ? "Full payment received"
+                                  : "Partial payment received"}{" "}
+                                on{" "}
+                                {selectedPayment.paymentDate}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Overdue */}
+                      {selectedPayment.status === "Overdue" && (
+                        <div className="flex items-start gap-2">
+                          <Clock className="text-red-500 mt-0.5" size={18} />
+                          <div>
+                            <p className="font-medium text-gray-700">Payment Overdue</p>
+                            <p className="text-gray-500 text-xs">
+                              Due date passed ({selectedPayment.dueDate}) <br />
+                              {selectedPayment.overdueDays} days overdue.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Project Payment Progress */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Project Payment Progress</h3>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Advance Payment</span>
+                        <span className="text-green-600 font-medium">✓ Paid</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span>Design Phase</span>
+                        <span className="text-green-600 font-medium">✓ Paid</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span>Construction</span>
+                        <span className="text-blue-600 font-medium">• Current</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span>Finishing</span>
+                        <span className="text-gray-400">Pending</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span>Final Payment</span>
+                        <span className="text-gray-400">Pending</span>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
-                <button className="bg-gray-100 px-4 py-2 rounded-md hover:bg-gray-200">
-                  Download Invoice
+              {/* ACTION BUTTONS */}
+              <div className="mt-8 flex justify-end gap-3">
+
+                {/* Pending → Mark as Paid */}
+                {selectedPayment.status === "Pending" && (
+                  <button
+                    onClick={() => {
+                      Swal.fire({
+                        title: "Mark as Paid?",
+                        text: "This payment will be marked as fully paid.",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonText: "Yes, mark paid",
+                      }).then((res) => {
+                        if (res.isConfirmed) {
+                          Swal.fire("Success", "Payment marked as paid!", "success");
+                        }
+                      });
+                    }}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                  >
+                    Mark as Paid
+                  </button>
+                )}
+
+                {/* Overdue → Send Reminder */}
+                {selectedPayment.status === "Overdue" && (
+                  <button
+                    onClick={() => {
+                      Swal.fire({
+                        title: "Send Reminder?",
+                        text: `Send payment reminder email to ${selectedPayment.client}?`,
+                        icon: "info",
+                        showCancelButton: true,
+                        confirmButtonText: "Send Reminder",
+                      }).then((res) => {
+                        if (res.isConfirmed) {
+                          Swal.fire("Sent!", "Reminder email sent successfully.", "success");
+                        }
+                      });
+                    }}
+                    className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700"
+                  >
+                    Send Reminder
+                  </button>
+                )}
+
+                {/* EXPORT MENU */}
+                <button
+                  onClick={() => {
+                    Swal.fire({
+                      title: "Export Invoice",
+                      html: `
+                  <div style="display:flex;flex-direction:column;gap:10px;text-align:left;">
+                    <button id="download" style="padding:8px 12px;border-radius:6px;border:1px solid #ddd;">Download Invoice</button>
+                    <button id="print" style="padding:8px 12px;border-radius:6px;border:1px solid #ddd;">Print Invoice</button>
+                    <button id="preview" style="padding:8px 12px;border-radius:6px;border:1px solid #ddd;">Preview Invoice</button>
+                  </div>
+                `,
+                      showConfirmButton: false,
+                    });
+
+                    setTimeout(() => {
+                      document.getElementById("download")?.addEventListener("click", () =>
+                        Swal.fire("Downloaded", "Invoice downloaded successfully.", "success")
+                      );
+                      document.getElementById("print")?.addEventListener("click", () =>
+                        Swal.fire("Printing...", "Invoice sent to printer.", "success")
+                      );
+                      document.getElementById("preview")?.addEventListener("click", () =>
+                        Swal.fire("Preview Opened", "Invoice preview opened.", "success")
+                      );
+                    }, 10);
+                  }}
+                  className="bg-gray-100 px-4 py-2 rounded-md hover:bg-gray-200"
+                >
+                  Export Invoice
                 </button>
+
                 <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
                   Edit Payment
                 </button>
@@ -372,6 +562,7 @@ export default function PaymentsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }
