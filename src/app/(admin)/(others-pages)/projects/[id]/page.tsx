@@ -1,11 +1,12 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useState } from "react";
-import { Calendar, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Calendar, Clock, CheckCircle2, AlertCircle, PencilLine, Trash2 } from "lucide-react";
 import ProgressBar from "../../main/ProgressBar";
 import RecentUpdates from "../../main/RecentUpdates";
 // import DocumentsTab from "../../main/DocumentsTab";
 import EditableTimeline from "../../main/EditableTimeline";
+import Swal from "sweetalert2";
 
 const projects = [
   {
@@ -85,6 +86,81 @@ export default function ProjectDetailsPage() {
   const project = projects.find((p) => p.id === Number(id));
   const [activeTab, setActiveTab] = useState("Overview");
 
+  // --------------------------------------------------
+  // Payment modal & history state (persisted to localStorage)
+  // --------------------------------------------------
+  const STORAGE_KEY = project ? `payments_project_${project.id}` : "payments_project_unknown";
+
+  // default payments (same entries you used originally)
+  const defaultPayments = [
+    {
+      id: "static-1",
+      date: "11/1/2023",
+      description: "Initial deposit",
+      method: "Bank Transfer",
+      amount: 10000,
+      status: "Completed",
+    },
+    {
+      id: "static-2",
+      date: "12/1/2023",
+      description: "Phase 1 completion",
+      method: "Check",
+      amount: 15000,
+      status: "Completed",
+    },
+    {
+      id: "static-3",
+      date: "1/5/2024",
+      description: "Phase 2 milestone",
+      method: "Bank Transfer",
+      amount: 10000,
+      status: "Completed",
+    },
+    {
+      id: "static-4",
+      date: "1/15/2024",
+      description: "Phase 3 milestone",
+      method: "Bank Transfer",
+      amount: 10000,
+      status: "Pending",
+    },
+  ];
+
+  const [payments, setPayments] = useState(() => {
+    try {
+      if (!project) return defaultPayments;
+      const raw = localStorage.getItem(`payments_project_${project.id}`);
+      if (!raw) return defaultPayments;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return defaultPayments;
+      return parsed;
+    } catch (e) {
+      return defaultPayments;
+    }
+  });
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [newPayment, setNewPayment] = useState({
+    date: "",
+    description: "",
+    method: "Bank Transfer",
+    amount: "",
+    status: "Completed",
+  });
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+
+  // persist payments to localStorage whenever they change
+  useEffect(() => {
+    if (!project) return;
+    try {
+      localStorage.setItem(`payments_project_${project.id}`, JSON.stringify(payments));
+    } catch (e) {
+      // ignore localStorage errors silently
+      console.warn("Failed to save payments to localStorage", e);
+    }
+  }, [payments, project]);
+
   if (!project) {
     return <div className="p-8 text-gray-600">Project not found.</div>;
   }
@@ -92,74 +168,133 @@ export default function ProjectDetailsPage() {
   const paymentPercent = Math.round((project.paid / project.total) * 100);
   const tabs = ["Overview", "Timeline", "Payments"];
 
-  // Timeline data
-  // const timeline = [
-  //   {
-  //     phase: "Project Started",
-  //     status: "Completed",
-  //     date: "11/1/2023",
-  //     details: "Initial planning and design phase completed",
-  //     image: "/timeline/countertop.jpg",
-  //   },
-  //   {
-  //     phase: "Demolition",
-  //     status: "Completed",
-  //     date: "11/15/2023",
-  //     details: "Old kitchen demolished and debris removed",
-  //     image: "/timeline/countertop.jpg",
-  //   },
-  //   {
-  //     phase: "Electrical Work",
-  //     status: "Completed",
-  //     date: "12/1/2023",
-  //     details: "New electrical wiring and outlets installed",
-  //     image: "/timeline/countertop.jpg",
-  //   },
-  //   {
-  //     phase: "Plumbing",
-  //     status: "Completed",
-  //     date: "12/15/2023",
-  //     details: "Water lines and gas connections updated",
-  //     image: "/timeline/countertop.jpg",
-  //   },
-  //   {
-  //     phase: "Carpentry",
-  //     status: "In Progress",
-  //     date: "1/5/2024",
-  //     details: "Custom cabinets installation in progress",
-  //     image: "/timeline/countertop.jpg",
-  //   },
-  //   {
-  //     phase: "Countertops",
-  //     status: "Pending",
-  //     date: "1/20/2024",
-  //     details: "Granite countertops measurement and installation",
-  //     image: "/timeline/countertop.jpg",
-  //   },
-  //   {
-  //     phase: "Appliances",
-  //     status: "Pending",
-  //     date: "2/1/2024",
-  //     details: "New appliances delivery and installation",
-  //     image: "/timeline/countertop.jpg",
-  //   },
-  //   {
-  //     phase: "Final Inspection",
-  //     status: "Pending",
-  //     date: "2/15/2024",
-  //     details: "Quality check and project completion",
-  //     image: "/timeline/countertop.jpg",
-  //   },
-  // ];
-
+  // upcoming milestones unchanged
   const upcomingMilestones = [
     { title: "Countertops Installation", date: "Jan 20, 2024" },
     { title: "Appliance Delivery", date: "Feb 1, 2024" },
   ];
 
+  // ---------- Handlers ----------
+  function openAddPaymentModal() {
+    setEditingPaymentId(null);
+    setNewPayment({
+      date: "",
+      description: "",
+      method: "Bank Transfer",
+      amount: "",
+      status: "Completed",
+    });
+    setShowPaymentModal(true);
+  }
+
+  function openEditPaymentModal(paymentId: string) {
+    const p = payments.find((x) => x.id === paymentId);
+    if (!p) return;
+    setEditingPaymentId(paymentId);
+    setNewPayment({
+      date: p.date || "",
+      description: p.description || "",
+      method: p.method || "Bank Transfer",
+      amount: String(p.amount ?? ""),
+      status: p.status || "Completed",
+    });
+    setShowPaymentModal(true);
+  }
+
+ function handleSavePayment() {
+  if (!newPayment.date || !newPayment.description || !newPayment.amount) {
+    Swal.fire({
+      icon: "warning",
+      title: "Missing Fields",
+      text: "Please fill date, description, and amount.",
+    });
+    return;
+  }
+
+  const numericAmount = Number(newPayment.amount);
+  if (Number.isNaN(numericAmount)) {
+    Swal.fire({
+      icon: "error",
+      title: "Invalid Amount",
+      text: "Please enter a valid number.",
+    });
+    return;
+  }
+
+  if (editingPaymentId) {
+    // update existing payment
+    setPayments((prev) =>
+      prev.map((p) =>
+        p.id === editingPaymentId
+          ? {
+              ...p,
+              date: newPayment.date,
+              description: newPayment.description,
+              method: newPayment.method,
+              amount: numericAmount,
+              status: newPayment.status,
+            }
+          : p
+      )
+    );
+
+    Swal.fire({
+      icon: "success",
+      title: "Saved!",
+      text: "Your changes have been updated.",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+  } else {
+    // add new payment
+    const uid =
+      typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function"
+        ? (crypto as any).randomUUID()
+        : `id-${Date.now()}`;
+
+    const newRow = {
+      id: uid,
+      date: newPayment.date,
+      description: newPayment.description,
+      method: newPayment.method,
+      amount: numericAmount,
+      status: newPayment.status,
+    };
+
+    setPayments((prev) => [...prev, newRow]);
+
+    Swal.fire({
+      icon: "success",
+      title: "Saved!",
+      text: "Payment has been recorded.",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  }
+
+  // close modal
+  setShowPaymentModal(false);
+  setEditingPaymentId(null);
+  setNewPayment({
+    date: "",
+    description: "",
+    method: "Bank Transfer",
+    amount: "",
+    status: "Completed",
+  });
+}
+
+
+  function handleDeletePayment(paymentId: string) {
+    const confirmed = window.confirm("Delete this payment? This action cannot be undone.");
+    if (!confirmed) return;
+    setPayments((prev) => prev.filter((p) => p.id !== paymentId));
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto bg-white shadow rounded-xl p-6">
+      <div className="mx-auto bg-white shadow rounded-xl p-6">
         {/* Header */}
         <div className="flex flex-wrap justify-between items-center mb-6">
           <div>
@@ -171,18 +306,18 @@ export default function ProjectDetailsPage() {
           <div className="flex gap-2">
             <span
               className={`px-3 py-1 text-xs font-semibold rounded-full ${project.status === "ACTIVE"
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-600"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-gray-100 text-gray-600"
                 }`}
             >
               {project.status}
             </span>
             <span
               className={`px-3 py-1 text-xs font-semibold rounded-full ${project.priority === "HIGH"
-                ? "bg-red-100 text-red-700"
-                : project.priority === "MEDIUM"
-                  ? "bg-yellow-100 text-yellow-700"
-                  : "bg-green-100 text-green-700"
+                  ? "bg-red-100 text-red-700"
+                  : project.priority === "MEDIUM"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-green-100 text-green-700"
                 }`}
             >
               {project.priority} Priority
@@ -197,8 +332,8 @@ export default function ProjectDetailsPage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`pb-2 text-sm font-medium transition-colors ${activeTab === tab
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-500 hover:text-blue-600"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-500 hover:text-blue-600"
                 }`}
             >
               {tab}
@@ -248,16 +383,24 @@ export default function ProjectDetailsPage() {
               <div className="border rounded-lg p-4">
                 <h3 className="font-semibold text-gray-800 mb-3">Project Information</h3>
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p><span className="font-medium">Project Name:</span> {project.name}</p>
+                  <p>
+                    <span className="font-medium">Project Name:</span> {project.name}
+                  </p>
                   <p>
                     <span className="font-medium">Description:</span> Complete kitchen renovation
                     including custom cabinetry, granite countertops, new appliances, and electrical
                     updates.
                   </p>
-                  <p><span className="font-medium">Address:</span> 123 Oak Street, Springfield, IL</p>
+                  <p>
+                    <span className="font-medium">Address:</span> 123 Oak Street, Springfield, IL
+                  </p>
                   <div className="flex justify-between">
-                    <p><span className="font-medium">Start Date:</span> 11/1/2023</p>
-                    <p><span className="font-medium">Est. Completion:</span> 2/15/2024</p>
+                    <p>
+                      <span className="font-medium">Start Date:</span> 11/1/2023
+                    </p>
+                    <p>
+                      <span className="font-medium">Est. Completion:</span> 2/15/2024
+                    </p>
                   </div>
                 </div>
               </div>
@@ -282,117 +425,24 @@ export default function ProjectDetailsPage() {
         )}
 
         {/* Timeline Tab */}
-        {/* {activeTab === "Timeline" && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                  Project Timeline
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Started: <strong>11/1/2023</strong> &nbsp; | &nbsp; Est. Completion:{" "}
-                  <strong>2/15/2024</strong>
-                </p>
-                <ProgressBar value={project.progress} color="blue" />
-                <p className="text-sm text-gray-500 mt-1 text-right">
-                  {project.progress}% Complete
-                </p>
-              </div>
-
-              <div className="relative border-l-2 border-gray-200 pl-6 space-y-6">
-                {timeline.map((item, i) => {
-                  const statusColor =
-                    item.status === "Completed"
-                      ? "text-green-600 bg-green-100"
-                      : item.status === "In Progress"
-                        ? "text-blue-600 bg-blue-100"
-                        : "text-gray-500 bg-gray-100";
-                  const Icon =
-                    item.status === "Completed"
-                      ? CheckCircle2
-                      : item.status === "In Progress"
-                        ? Clock
-                        : AlertCircle;
-
-                  return (
-                    <div key={i} className="relative">
-                      <span
-                        className={`absolute -left-[31px] top-1 w-6 h-6 flex items-center justify-center rounded-full ${statusColor}`}
-                      >
-                        <Icon size={14} />
-                      </span>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition">
-                        <div className="flex justify-between items-center mb-1">
-                          <h3 className="font-medium text-gray-800">{item.phase}</h3>
-                          <span
-                            className={`text-xs font-semibold px-2 py-1 rounded-full ${item.status === "Completed"
-                              ? "bg-green-100 text-green-700"
-                              : item.status === "In Progress"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-gray-100 text-gray-500"
-                              }`}
-                          >
-                            {item.status}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600">{item.details}</p>
-                        <p className="text-xs text-gray-400 mt-1">{item.date}</p>
-                      
-                        {item.image && (
-                          <div className="mt-3">
-                            <img
-                              src={item.image}
-                              alt={item.phase}
-                              className="w-36 h-36 object-cover rounded-full border"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-             
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  Upcoming Milestones
-                </h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {upcomingMilestones.map((m, i) => (
-                    <div
-                      key={i}
-                      className="p-4 border rounded-lg bg-blue-50 text-blue-700 flex justify-between items-center"
-                    >
-                      <p className="font-medium">{m.title}</p>
-                      <p className="text-sm">{m.date}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )} */}
         {activeTab === "Timeline" && (
           <div className="space-y-8">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Project Timeline
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Project Timeline</h2>
               <p className="text-sm text-gray-600">
                 Started: <strong>11/1/2023</strong> &nbsp; | &nbsp; Est. Completion:{" "}
                 <strong>2/15/2024</strong>
               </p>
               <ProgressBar value={project.progress} color="blue" />
-              <p className="text-sm text-gray-500 mt-1 text-right">
-                {project.progress}% Complete
-              </p>
+              <p className="text-sm text-gray-500 mt-1 text-right">{project.progress}% Complete</p>
             </div>
 
             {/* Editable Timeline */}
             <EditableTimeline />
-            
           </div>
         )}
 
+        {/* Payments Tab */}
         {activeTab === "Payments" && (
           <div className="space-y-6">
             {/* Overview cards */}
@@ -418,30 +468,20 @@ export default function ProjectDetailsPage() {
               <div className="p-4 bg-white border rounded-lg shadow-sm">
                 <p className="text-sm text-gray-500">Progress</p>
                 <div className="flex items-end justify-between">
-                  <p className="text-2xl font-semibold text-blue-600 mt-1">
-                    {project.progress}%
-                  </p>
+                  <p className="text-2xl font-semibold text-blue-600 mt-1">{project.progress}%</p>
                   <p className="text-sm text-gray-400">{paymentPercent}% paid</p>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div
-                    className="h-2 bg-blue-600 rounded-full"
-                    style={{ width: `${paymentPercent}%` }}
-                  />
+                  <div className="h-2 bg-blue-600 rounded-full" style={{ width: `${paymentPercent}%` }} />
                 </div>
               </div>
             </div>
 
             {/* Payment Progress Bar */}
             <div className="bg-white border rounded-lg p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                Payment Progress
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Payment Progress</h3>
               <div className="relative w-full bg-gray-200 rounded-full h-3 mb-2">
-                <div
-                  className="absolute left-0 top-0 h-3 bg-green-500 rounded-full"
-                  style={{ width: `${paymentPercent}%` }}
-                />
+                <div className="absolute left-0 top-0 h-3 bg-green-500 rounded-full" style={{ width: `${paymentPercent}%` }} />
               </div>
               <div className="flex justify-between text-sm text-gray-600">
                 <span>$0</span>
@@ -453,10 +493,11 @@ export default function ProjectDetailsPage() {
             {/* Payment History Table */}
             <div className="bg-white border rounded-lg p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Payment History
-                </h3>
-                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition">
+                <h3 className="text-lg font-semibold text-gray-800">Payment History</h3>
+                <button
+                  onClick={openAddPaymentModal}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition"
+                >
                   + Record Payment
                 </button>
               </div>
@@ -470,58 +511,65 @@ export default function ProjectDetailsPage() {
                       <th className="py-2 px-3 text-left">Method</th>
                       <th className="py-2 px-3 text-left">Amount</th>
                       <th className="py-2 px-3 text-left">Status</th>
+                      <th className="py-2 px-3 text-left">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {[
-                      {
-                        date: "11/1/2023",
-                        description: "Initial deposit",
-                        method: "Bank Transfer",
-                        amount: 10000,
-                        status: "Completed",
-                      },
-                      {
-                        date: "12/1/2023",
-                        description: "Phase 1 completion",
-                        method: "Check",
-                        amount: 15000,
-                        status: "Completed",
-                      },
-                      {
-                        date: "1/5/2024",
-                        description: "Phase 2 milestone",
-                        method: "Bank Transfer",
-                        amount: 10000,
-                        status: "Completed",
-                      },
-                      {
-                        date: "1/15/2024",
-                        description: "Phase 3 milestone",
-                        method: "Bank Transfer",
-                        amount: 10000,
-                        status: "Pending",
-                      },
-                    ].map((payment, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
+                    {payments.map((payment, idx) => (
+                      <tr key={payment.id ?? idx} className="hover:bg-gray-50">
                         <td className="py-2 px-3 text-gray-700">{payment.date}</td>
                         <td className="py-2 px-3 text-gray-700">{payment.description}</td>
                         <td className="py-2 px-3 text-gray-700">{payment.method}</td>
-                        <td className="py-2 px-3 font-medium text-gray-800">
-                          ${payment.amount.toLocaleString()}
-                        </td>
+                        <td className="py-2 px-3 font-medium text-gray-800">${Number(payment.amount).toLocaleString()}</td>
                         <td className="py-2 px-3">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${payment.status === "Completed"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-700"
-                              }`}
-                          >
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${payment.status === "Completed" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
                             {payment.status}
                           </span>
                         </td>
+                        <td className="py-2 px-3">
+                          <div className="flex gap-3">
+                            <button
+                              title="Edit"
+                              onClick={() => openEditPaymentModal(payment.id)}
+                              className="p-1 rounded hover:bg-gray-100 transition"
+                            >
+                              <PencilLine className="h-4 w-4 text-gray-600 hover:text-gray-800" />
+                            </button>
+
+                            <button
+                              title="Delete"
+                              onClick={() =>
+                                Swal.fire({
+                                  title: "Are you sure?",
+                                  text: "This payment will be permanently deleted.",
+                                  icon: "warning",
+                                  showCancelButton: true,
+                                  confirmButtonColor: "#d33",
+                                  cancelButtonColor: "#3085d6",
+                                  confirmButtonText: "Delete",
+                                }).then((result) => {
+                                  if (result.isConfirmed) {
+                                    handleDeletePayment(payment.id);
+                                    Swal.fire("Deleted!", "Payment has been removed.", "success");
+                                  }
+                                })
+                              }
+                              className="p-1 rounded hover:bg-red-50 transition"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600 hover:text-red-700" />
+                            </button>
+                          </div>
+                        </td>
+
                       </tr>
                     ))}
+                    {payments.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-6 text-center text-gray-500">
+                          No payments recorded.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -531,21 +579,15 @@ export default function ProjectDetailsPage() {
             <div className="bg-gradient-to-r from-blue-50 to-blue-100 border rounded-lg p-6 shadow-sm">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                    Next Payment Due
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1">Next Payment Due</h3>
                   <p className="text-sm text-gray-600">
                     Phase 3 Milestone Payment <br />
                     Due: {project.nextPayment}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-semibold text-blue-700 mb-2">
-                    ${project.balance.toLocaleString()}
-                  </p>
-                  <button className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition">
-                    Send Invoice
-                  </button>
+                  <p className="text-2xl font-semibold text-blue-700 mb-2">${project.balance.toLocaleString()}</p>
+                  <button className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition">Send Invoice</button>
                 </div>
               </div>
             </div>
@@ -554,15 +596,102 @@ export default function ProjectDetailsPage() {
 
         {/* {activeTab === "Documents" && <DocumentsTab />} */}
 
-
         {/* Placeholder tabs */}
         {/* {activeTab !== "Overview" && activeTab !== "Timeline" && (
             <div className="text-gray-500 text-center py-10">
               {activeTab} section coming soon.
             </div>
           )} */}
-      </div>
 
+        {/* ------------------------ Modal (Add / Edit) ------------------------ */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white w-full max-w-lg p-6 rounded-lg shadow-lg">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                {editingPaymentId ? "Edit Payment" : "Record Payment"}
+              </h3>
+
+              <div className="grid grid-cols-1 gap-4 text-sm">
+                <div>
+                  <label className="block mb-1 font-medium">Date</label>
+                  <input
+                    type="date"
+                    className="w-full border p-2 rounded"
+                    value={newPayment.date}
+                    onChange={(e) => setNewPayment({ ...newPayment, date: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-medium">Description</label>
+                  <input
+                    type="text"
+                    className="w-full border p-2 rounded"
+                    value={newPayment.description}
+                    onChange={(e) => setNewPayment({ ...newPayment, description: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-medium">Method</label>
+                  <select
+                    className="w-full border p-2 rounded"
+                    value={newPayment.method}
+                    onChange={(e) => setNewPayment({ ...newPayment, method: e.target.value })}
+                  >
+                    <option>Bank Transfer</option>
+                    <option>Cash</option>
+                    <option>Check</option>
+                    <option>Online Transfer</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-medium">Amount ($)</label>
+                  <input
+                    type="number"
+                    className="w-full border p-2 rounded"
+                    value={newPayment.amount}
+                    onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-medium">Status</label>
+                  <select
+                    className="w-full border p-2 rounded"
+                    value={newPayment.status}
+                    onChange={(e) => setNewPayment({ ...newPayment, status: e.target.value })}
+                  >
+                    <option>Completed</option>
+                    <option>Pending</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setEditingPaymentId(null);
+                  }}
+                  className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleSavePayment}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  {editingPaymentId ? "Save Changes" : "Save Payment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* ---------------------- end modal ---------------------- */}
+      </div>
     </main>
   );
 }
